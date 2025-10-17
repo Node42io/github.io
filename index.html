@@ -231,7 +231,7 @@
                      :class="{ 'slide-enter': index === currentSlide }">
                     
                     <!-- Diagonal Cream Background (only for regular slides on desktop) -->
-                    <div x-show="!slide.isGrid" 
+                    <div x-show="!slide.isGrid && !slide.isIntro" 
                          class="hidden lg:block absolute right-0 top-0 w-1/2 h-full diagonal-bg" style="background: linear-gradient(135deg, #F5F0E8 0%, #E8DCC8 100%);"></div>
                     
                     <!-- Grid Pattern Overlay (for grid slides) -->
