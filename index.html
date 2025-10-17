@@ -270,18 +270,6 @@
                                 </div>
                             </div>
                             
-                            <!-- Frameworks Section -->
-                            <div class="mb-10 md:mb-12 px-4">
-                                <h3 class="text-xs md:text-sm font-bold uppercase tracking-wider mb-4 text-center" style="color: rgba(200, 168, 87, 0.9);">Scientific Frameworks & Classifications</h3>
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3 max-w-3xl mx-auto">
-                                    <template x-for="framework in slide.frameworks" :key="framework">
-                                        <div class="glass p-3 md:p-4 rounded-lg text-center transition-all hover:scale-[1.02]" style="background: rgba(200,168,87,0.06); border: 1px solid rgba(200,168,87,0.15);">
-                                            <p class="text-xs md:text-sm leading-relaxed" style="color: rgba(245, 240, 232, 0.75);" x-text="framework">Framework</p>
-                                        </div>
-                                    </template>
-                                </div>
-                            </div>
-                            
                             <!-- Table of Contents -->
                             <div class="px-4">
                                 <h3 class="text-sm md:text-base font-bold uppercase tracking-wider mb-6 text-center" style="color: rgba(200, 168, 87, 0.9);">Module Overview</h3>
@@ -775,8 +763,8 @@
                             minTemp: 1.0,
                             animate: false
                         },
-                        userPanningEnabled: false,
-                        userZoomingEnabled: false,
+                        userPanningEnabled: true,
+                        userZoomingEnabled: true,
                         boxSelectionEnabled: false,
                         autoungrabify: true
                     });
@@ -883,13 +871,6 @@
                         isIntro: true,
                         subtitle: "Business Ecosystem Intelligence Platform",
                         description: "We create comprehensive digital twins of business ecosystems using scientific frameworks, international ontologies, and world-renowned classification systems. Our platform transforms complex market structures into analyzable, queryable knowledge graphs that enable strategic decision-making at scale.",
-                        frameworks: [
-                            "Jobs-to-be-Done Framework (Christensen/Ulwick)",
-                            "UNSPSC Product Classification",
-                            "UN CPC Service Classification",
-                            "World Bank Regional Taxonomy",
-                            "Neo4j Graph Database Architecture"
-                        ],
                         sections: [
                             {
                                 title: "Portfolio Analyzer",
@@ -907,7 +888,7 @@
                                 modules: "9 Modules"
                             }
                         ],
-                        tags: ["Digital Twin", "Ontology", "Knowledge Graph", "Documentation"]
+                        tags: ["Digital Twin", "Documentation"]
                     },
                     {
                         number: "01",
