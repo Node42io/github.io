@@ -1,0 +1,1173 @@
+  <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Portfolio Agent - Module Workflow</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- Monument Extended Font -->
+    <link href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&f[]=satoshi@400,500,700,900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Cytoscape.js for graph visualization -->
+    <script src="https://unpkg.com/cytoscape@3.28.1/dist/cytoscape.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        display: ['Satoshi', 'system-ui', 'sans-serif'], // Monument alternative
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                    colors: {
+                        cream: '#F5F0E8',
+                        gold: '#C8A857',
+                        'gold-dark': '#B59745',
+                        charcoal: '#2C3544',
+                        'charcoal-light': '#3D4A5C',
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        [x-cloak] { display: none; }
+        
+        body {
+            overflow: hidden;
+        }
+        
+        .slide-enter {
+            animation: slideIn 0.8s cubic-bezier(0.76, 0, 0.24, 1);
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(30px) scale(0.98);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        
+        .diagonal-bg {
+            clip-path: polygon(10% 0, 100% 0, 100% 100%, 0% 100%);
+        }
+        
+        .schema-node {
+            transition: all 0.3s ease;
+        }
+        
+        .schema-node:hover {
+            transform: translateY(-4px) scale(1.05);
+        }
+        
+        .floating {
+            animation: floating 3s ease-in-out infinite;
+        }
+        
+        @keyframes floating {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .gradient-text {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .glass {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .grid-bg {
+            background-image: 
+                linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+            background-size: 50px 50px;
+        }
+        
+        /* SVG text styling */
+        svg text.font-display {
+            font-family: 'Satoshi', 'Monument Extended', system-ui, sans-serif;
+        }
+        
+        /* Neo4j style animations */
+        @keyframes pulse-node {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+        
+        svg circle {
+            transition: all 0.3s ease;
+        }
+        
+        .neo4j-node {
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+        
+        .neo4j-node:hover {
+            transform: scale(1.1);
+        }
+        
+        .neo4j-node:hover circle {
+            filter: drop-shadow(0 0 15px rgba(200, 168, 87, 0.8));
+        }
+        
+        /* Ensure SVG is visible */
+        svg {
+            overflow: visible;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 1024px) {
+            .diagonal-bg {
+                width: 100% !important;
+                clip-path: none !important;
+            }
+        }
+        
+        /* Hide scrollbar but keep functionality */
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        
+        /* Touch-friendly buttons */
+        .touch-manipulation {
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        /* Better mobile text wrapping */
+        @media (max-width: 768px) {
+            body {
+                font-size: 14px;
+            }
+        }
+        
+        /* Smooth scrolling for mobile content */
+        @media (max-width: 1024px) {
+            .overflow-y-auto {
+                -webkit-overflow-scrolling: touch;
+            }
+        }
+        
+        /* Ensure Cytoscape container is visible on all devices */
+        .cytoscape-container {
+            position: relative !important;
+            display: block !important;
+            width: 100% !important;
+            height: 100% !important;
+        }
+        
+        .cytoscape-container canvas {
+            display: block !important;
+        }
+        
+        /* Mobile header bar shadow */
+        @media (max-width: 1024px) {
+            header {
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-black text-white font-sans" x-data="carousel()">
+    
+    <!-- Animated Background -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none">
+        <div class="absolute top-0 left-0 w-full h-full opacity-30" style="background: radial-gradient(circle at 20% 50%, rgba(200,168,87,0.08) 0%, transparent 50%);"></div>
+        <div class="absolute bottom-0 right-0 w-1/2 h-1/2 opacity-30" style="background: radial-gradient(circle at 80% 50%, rgba(200,168,87,0.06) 0%, transparent 50%);"></div>
+    </div>
+    
+    <!-- Fixed Header -->
+    <header class="fixed top-0 left-0 right-0 lg:top-8 lg:left-12 lg:right-auto z-50 bg-black lg:bg-transparent px-4 py-3 md:px-6 md:py-4 lg:px-0 lg:py-0">
+        <h1 class="font-display text-2xl md:text-4xl lg:text-6xl font-black uppercase tracking-tight leading-none" style="color: #C8A857;">
+            <span x-text="slides[currentSlide]?.category || 'Portfolio Agent'"></span>
+        </h1>
+        <p class="mt-1 lg:mt-2 text-[9px] md:text-[10px] lg:text-xs tracking-widest uppercase font-medium" style="color: #888;">Module Workflow</p>
+    </header>
+    
+    <!-- Slide Counter -->
+    <div class="fixed top-0 right-0 md:top-6 md:right-8 lg:top-8 lg:right-12 z-50 flex items-center gap-4 bg-black lg:bg-transparent px-4 py-3 md:px-0 md:py-0">
+        <div class="text-right">
+            <div class="text-xl md:text-2xl lg:text-4xl font-display font-bold" style="color: #C8A857;">
+                <span x-text="String(currentSlide + 1).padStart(2, '0')">01</span>
+            </div>
+            <div class="text-[9px] md:text-[10px] lg:text-xs tracking-widest uppercase font-medium" style="color: #888;">
+                <span x-text="String(slides.length).padStart(2, '0')">20</span> Modules
+            </div>
+        </div>
+    </div>
+    
+    <!-- Main Carousel -->
+    <div class="relative w-screen h-screen overflow-hidden">
+        <div class="absolute inset-0 flex transition-transform duration-700 ease-out" 
+             :style="`transform: translateX(-${currentSlide * 100}%)`">
+            
+            <template x-for="(slide, index) in slides" :key="index">
+                <div class="min-w-full h-full flex items-center relative"
+                     :class="{ 'slide-enter': index === currentSlide }">
+                    
+                    <!-- Diagonal Cream Background (only for regular slides on desktop) -->
+                    <div x-show="!slide.isGrid" 
+                         class="hidden lg:block absolute right-0 top-0 w-1/2 h-full diagonal-bg" style="background: linear-gradient(135deg, #F5F0E8 0%, #E8DCC8 100%);"></div>
+                    
+                    <!-- Grid Pattern Overlay (for grid slides) -->
+                    <div x-show="slide.isGrid" 
+                         class="absolute inset-0 grid-bg" style="background: linear-gradient(135deg, rgba(200,168,87,0.12) 0%, rgba(44,53,68,0.4) 50%, transparent 100%);"></div>
+                    
+                    <!-- Content -->
+                    <div class="relative z-10 w-full h-full flex items-start lg:items-center px-6 md:px-12 lg:px-20 xl:px-24 overflow-y-auto lg:overflow-y-visible">
+                        
+                        <!-- Regular Module Layout -->
+                        <div x-show="!slide.isGrid" class="flex flex-col lg:grid lg:grid-cols-[45%_55%] gap-4 md:gap-8 w-full max-w-screen-2xl mx-auto items-start py-4 pb-24 lg:py-0">
+                            <!-- Left Column: Info -->
+                            <div class="flex flex-col justify-start space-y-3 md:space-y-4 pr-2 md:pr-4 pt-24 md:pt-8 max-w-full overflow-hidden order-1">
+                                <div class="text-[10px] tracking-[0.2em] uppercase font-semibold" style="color: rgba(245, 240, 232, 0.5);">
+                                    <span>Module</span>
+                                    <span x-text="slide.number" class="ml-2">01</span>
+                                </div>
+                                
+                                <h2 class="font-display text-2xl md:text-3xl lg:text-4xl font-extrabold leading-[1.3] break-words py-1" style="max-width: 100%; background: linear-gradient(135deg, #F5F0E8 0%, #C8A857 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+                                    <span x-text="slide.title">Title</span>
+                                </h2>
+                                
+                                <!-- General Description -->
+                                <div class="space-y-2">
+                                    <h3 class="text-xs font-bold uppercase tracking-wider" style="color: rgba(200, 168, 87, 0.9);">What it does</h3>
+                                    <p class="text-xs lg:text-sm leading-relaxed break-words" style="max-width: 100%; line-height: 1.7; color: rgba(245, 240, 232, 0.75);">
+                                        <span x-text="slide.objective">Objective text</span>
+                                    </p>
+                                </div>
+                                
+                                <!-- Technical Description -->
+                                <div x-show="slide.technical" class="space-y-2">
+                                    <h3 class="text-xs font-bold uppercase tracking-wider" style="color: rgba(200, 168, 87, 0.9);">How it works</h3>
+                                    <p class="text-xs lg:text-sm leading-relaxed break-words" style="max-width: 100%; line-height: 1.7; color: rgba(245, 240, 232, 0.65);">
+                                        <span x-text="slide.technical">Technical text</span>
+                                    </p>
+                                </div>
+                                
+                                <!-- Theory Framework -->
+                                <div x-show="slide.theory" class="space-y-2">
+                                    <h3 class="text-xs font-bold uppercase tracking-wider" style="color: rgba(200, 168, 87, 0.9);">Theoretical Foundation</h3>
+                                    <p class="text-[11px] leading-relaxed break-words" style="max-width: 100%; line-height: 1.6; color: rgba(245, 240, 232, 0.55);">
+                                        <span x-text="slide.theory">Theory</span>
+                                    </p>
+                                </div>
+                                
+                                <div class="flex flex-wrap gap-2.5">
+                                    <template x-for="tag in slide.tags" :key="tag">
+                                        <span class="px-3.5 py-1.5 rounded-full text-[10px] font-semibold tracking-[0.05em] uppercase transition-all hover:scale-105 border"
+                                              style="color: rgba(200, 168, 87, 0.9); background: rgba(200, 168, 87, 0.08); border-color: rgba(200, 168, 87, 0.2); backdrop-filter: blur(8px);">
+                                            <span x-text="tag">Tag</span>
+                                        </span>
+                                    </template>
+                                </div>
+                            </div>
+                            
+                            <!-- Right Column: Schema Visualization -->
+                            <div class="flex items-center justify-center overflow-hidden order-2 pb-8 lg:pb-0 w-full">
+                                <div class="w-full relative h-[350px] lg:h-[500px]">
+                                    <div class="absolute inset-0 bg-transparent rounded-lg overflow-visible">
+                                        <div :id="'cy-' + slide.number" 
+                                             class="cytoscape-container"
+                                             style="width: 100%; height: 100%; min-height: 350px; background: radial-gradient(circle at 50% 50%, rgba(200, 168, 87, 0.05), transparent 70%);">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Grid Reference Layout -->
+                        <div x-show="slide.isGrid" class="w-full h-full flex flex-col max-w-7xl mx-auto px-4 pt-28 md:pt-28 lg:pt-32 pb-20 md:pb-24">
+                            <!-- Grid Header -->
+                            <div class="text-center mb-3 md:mb-4 lg:mb-6">
+                                <div class="text-[9px] md:text-[10px] tracking-[0.2em] uppercase font-semibold mb-2" style="color: rgba(200, 168, 87, 0.7);">
+                                    <span>Reference Grid</span>
+                                    <span x-text="slide.number" class="ml-2"></span>
+                                </div>
+                                
+                                <h2 class="font-display text-lg md:text-2xl lg:text-3xl xl:text-4xl font-extrabold mb-2 md:mb-3 px-2 py-1 break-words" style="background: linear-gradient(135deg, #C8A857 0%, #B59745 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; line-height: 1.35;">
+                                    <span x-text="slide.title">Title</span>
+                                </h2>
+                                
+                                <p class="text-[10px] md:text-xs leading-relaxed max-w-3xl mx-auto mb-2 md:mb-3 px-2 break-words" style="line-height: 1.6; color: rgba(245, 240, 232, 0.8);">
+                                    <span x-text="slide.objective">Objective text</span>
+                                </p>
+                                
+                                <div class="flex flex-wrap gap-1.5 justify-center px-2">
+                                    <template x-for="tag in slide.tags" :key="tag">
+                                        <span class="px-2 md:px-2.5 py-0.5 md:py-1 rounded-full text-[8px] md:text-[9px] font-semibold tracking-[0.05em] uppercase border"
+                                              style="color: rgba(200, 168, 87, 0.9); background: rgba(200, 168, 87, 0.08); border-color: rgba(200, 168, 87, 0.2);">
+                                            <span x-text="tag">Tag</span>
+                                        </span>
+                                    </template>
+                                </div>
+                            </div>
+                            
+                            <!-- Grid Content -->
+                            <div class="flex-1 overflow-y-auto scrollbar-hide">
+                                <div class="grid grid-cols-1 lg:grid-cols-[30%_70%] gap-3 md:gap-4 lg:gap-6 items-start pb-4">
+                                    <!-- Left: Visual -->
+                                    <div class="hidden lg:flex items-start justify-center pt-2">
+                                        <div class="relative w-40 h-40 xl:w-48 xl:h-48">
+                                            <div class="absolute inset-0 flex items-center justify-center">
+                                                <div class="absolute w-full h-full rounded-full" style="border: 2px solid rgba(200,168,87,0.2);"></div>
+                                                <div class="absolute w-4/5 h-4/5 rounded-full" style="border: 2px solid rgba(200,168,87,0.3);"></div>
+                                                <div class="absolute w-3/5 h-3/5 rounded-full" style="border: 2px solid rgba(200,168,87,0.4);"></div>
+                                                
+                                                <div class="relative z-10 w-16 h-16 xl:w-20 xl:h-20 rounded-xl flex items-center justify-center shadow-2xl" style="background: linear-gradient(135deg, #C8A857 0%, #B59745 100%);">
+                                                    <span class="text-xl xl:text-2xl font-display font-bold" style="color: #000000;" x-text="slide.number">REF</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Right: Grid Info -->
+                                    <div class="flex flex-col space-y-2 md:space-y-2.5">
+                                        <template x-if="slide.gridInfo">
+                                            <div class="space-y-2 md:space-y-2.5">
+                                                <template x-for="(item, i) in slide.gridInfo" :key="i">
+                                                    <div class="glass p-2.5 md:p-3 rounded-lg transition-all hover:scale-[1.01]" style="background: rgba(200,168,87,0.08); border: 1px solid rgba(200,168,87,0.25);">
+                                                        <h4 class="text-[10px] md:text-xs font-bold mb-1 uppercase tracking-wider break-words py-0.5" style="color: #C8A857; line-height: 1.4;" x-text="item.title">Title</h4>
+                                                        <p class="text-[9px] md:text-[10px] leading-relaxed break-words" style="color: rgba(245, 240, 232, 0.7); line-height: 1.5;" x-text="item.description">Description</p>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+    
+    <!-- Navigation Controls -->
+    <div class="fixed bottom-8 md:bottom-12 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4 md:gap-8">
+        <!-- Previous Button -->
+        <button @click="prev()" 
+                :disabled="currentSlide === 0"
+                :class="currentSlide === 0 ? 'opacity-30 cursor-not-allowed' : 'hover:scale-110 active:scale-95'"
+                class="w-12 h-12 md:w-14 md:h-14 rounded-full glass backdrop-blur-xl flex items-center justify-center transition-all touch-manipulation"
+                style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);">
+            <svg class="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="white" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+            </svg>
+        </button>
+        
+        <!-- Indicators -->
+        <div class="flex gap-1.5 md:gap-2 overflow-x-auto max-w-[200px] md:max-w-none scrollbar-hide">
+            <template x-for="(slide, index) in slides" :key="index">
+                <button @click="goTo(index)"
+                        class="transition-all rounded-full flex-shrink-0 touch-manipulation"
+                        :style="currentSlide === index ? 'width: 1.5rem; height: 0.4rem; background: #C8A857;' : 'width: 0.4rem; height: 0.4rem; background: #666;'">
+                </button>
+            </template>
+        </div>
+        
+        <!-- Next Button -->
+        <button @click="next()" 
+                :disabled="currentSlide === slides.length - 1"
+                :class="currentSlide === slides.length - 1 ? 'opacity-30 cursor-not-allowed' : 'hover:scale-110 active:scale-95'"
+                class="w-12 h-12 md:w-14 md:h-14 rounded-full glass backdrop-blur-xl flex items-center justify-center transition-all touch-manipulation"
+                style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);">
+            <svg class="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="white" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+            </svg>
+        </button>
+    </div>
+    
+    <!-- Progress Bar -->
+    <div class="fixed bottom-0 left-0 w-full h-1 z-40" style="background: #1a1a1a;">
+        <div class="h-full transition-all duration-700"
+             style="background: linear-gradient(90deg, #C8A857 0%, #B59745 100%);"
+             :style="`width: ${((currentSlide + 1) / slides.length) * 100}%`"></div>
+    </div>
+    
+    <!-- NODE42 and Date -->
+    <div class="fixed bottom-4 right-4 md:bottom-6 md:right-8 z-50 text-right">
+        <div class="text-[10px] md:text-xs font-bold tracking-wider uppercase" style="color: #C8A857;">NODE42</div>
+        <div class="text-[9px] md:text-[10px] tracking-wide" style="color: #888;">17.10.2025</div>
+    </div>
+
+    <script>
+        function carousel() {
+            return {
+                currentSlide: 0,
+                cytoscapeInstances: {},
+                
+                // Get all cumulative entities up to a slide (builds up the schema progressively)
+                getCumulativeSchema(slideIndex) {
+                    const allEntities = new Map(); // entity name -> first seen index
+                    const allRelationships = new Map(); // "source->target" -> relationship object
+                    
+                    // Collect all entities and relationships from slides 0 to slideIndex
+                    for (let i = 0; i <= slideIndex; i++) {
+                        const s = this.slides[i];
+                        if (s.isGrid) continue;
+                        
+                        // Add entities
+                        if (s.entities) {
+                            s.entities.forEach(entity => {
+                                if (!allEntities.has(entity)) {
+                                    allEntities.set(entity, i);
+                                }
+                            });
+                        }
+                        
+                        // Add relationships
+                        if (s.relationships) {
+                            s.relationships.forEach(rel => {
+                                const key = `${rel.from}->${rel.to}`;
+                                if (!allRelationships.has(key)) {
+                                    allRelationships.set(key, { ...rel, slideIndex: i });
+                                }
+                            });
+                        }
+                    }
+                    
+                    return { allEntities, allRelationships };
+                },
+                
+                // Fixed positions for each entity type (prevents layout jumping)
+                getEntityPosition(entityName) {
+                    const positions = {
+                        // Core entities - center area
+                        'Company': { x: 250, y: 150 },
+                        'Product': { x: 250, y: 350 },
+                        
+                        // Organizational hierarchy - left side
+                        'Orglevel1': { x: 400, y: 100 },
+                        'Orglevel2': { x: 400, y: 300 },
+                        'Orglevel3': { x: 250, y: 250 },
+                        
+                        // UNSPSC hierarchy - right side
+                        'UNSPSCSegment': { x: 400, y: 450 },
+                        'UNSPSCFamily': { x: 250, y: 450 },
+                        'UNSPSCClass': { x: 150, y: 350 },
+                        'UNSPSCCommodity': { x: 150, y: 200 },
+                        
+                        // Child categories - bottom left
+                        'Commodity_Child': { x: 100, y: 450 },
+                        
+                        // Functionality - top right
+                        'Functionality': { x: 450, y: 200 },
+                        'Feature': { x: 500, y: 350 },
+                        
+                        // Market entities - far right
+                        'Market': { x: 500, y: 150 },
+                        'CPC': { x: 550, y: 250 },
+                        'Market L1': { x: 550, y: 100 },
+                        'Market L2': { x: 600, y: 200 },
+                        'Market L3': { x: 600, y: 300 },
+                        
+                        // Competition - bottom right
+                        'UNSPSCClass': { x: 450, y: 450 }
+                    };
+                    
+                    // Default position if entity not found
+                    return positions[entityName] || { 
+                        x: 300 + Math.random() * 200, 
+                        y: 200 + Math.random() * 200 
+                    };
+                },
+                
+                // Initialize Cytoscape.js graph for a slide with progressive schema building
+                initGraph(slide) {
+                    if (slide.isGrid) return;
+                    
+                    const containerId = 'cy-' + slide.number;
+                    const container = document.getElementById(containerId);
+                    if (!container) {
+                        console.log('Container not found:', containerId);
+                        return;
+                    }
+                    
+                    // Ensure container has dimensions
+                    if (container.offsetWidth === 0 || container.offsetHeight === 0) {
+                        console.log('Container has no dimensions, retrying...');
+                        setTimeout(() => this.initGraph(slide), 100);
+                        return;
+                    }
+                    
+                    // Get current slide index
+                    const slideIndex = this.slides.findIndex(s => s.number === slide.number);
+                    const { allEntities, allRelationships } = this.getCumulativeSchema(slideIndex);
+                    
+                    // Current slide's active entities and relationships
+                    const activeEntities = new Set(slide.entities || []);
+                    const activeRelKeys = new Set();
+                    if (slide.relationships) {
+                        slide.relationships.forEach(rel => {
+                            activeRelKeys.add(`${rel.from}->${rel.to}`);
+                        });
+                    }
+                    
+                    // Build elements array for Cytoscape
+                    const elements = [];
+                    const entityToId = new Map();
+                    
+                    // Separate elements by active state for proper z-ordering
+                    const inactiveElements = [];
+                    const activeElements = [];
+                    
+                    // Add all cumulative nodes (separate by active state)
+                    let nodeIdx = 0;
+                    allEntities.forEach((firstSeenIdx, entityName) => {
+                        const nodeId = `node-${nodeIdx++}`;
+                        entityToId.set(entityName, nodeId);
+                        
+                        const isActive = activeEntities.has(entityName);
+                        
+                        const node = {
+                            data: { 
+                                id: nodeId, 
+                                label: entityName,
+                                active: isActive
+                            }
+                        };
+                        
+                        if (isActive) {
+                            activeElements.push(node);
+                        } else {
+                            inactiveElements.push(node);
+                        }
+                    });
+                    
+                    // Add all cumulative edges (separate by active state)
+                    allRelationships.forEach((rel, key) => {
+                        const sourceId = entityToId.get(rel.from);
+                        const targetId = entityToId.get(rel.to);
+                        
+                        if (sourceId && targetId) {
+                            const isActive = activeRelKeys.has(key);
+                            
+                            const edge = {
+                                data: {
+                                    id: `edge-${key}`,
+                                    source: sourceId,
+                                    target: targetId,
+                                    label: rel.label.toUpperCase(),
+                                    active: isActive
+                                }
+                            };
+                            
+                            if (isActive) {
+                                activeElements.push(edge);
+                            } else {
+                                inactiveElements.push(edge);
+                            }
+                        }
+                    });
+                    
+                    // Add inactive elements first (behind), then active elements (on top)
+                    elements.push(...inactiveElements, ...activeElements);
+                    
+                    // Only create if it doesn't already exist
+                    if (this.cytoscapeInstances[containerId]) {
+                        console.log('Graph already exists for', containerId);
+                        return;
+                    }
+                    
+                    // Initialize Cytoscape with conditional styling
+                    const cy = cytoscape({
+                        container: container,
+                        elements: elements,
+                        style: [
+                            {
+                                selector: 'node[active]',
+                                style: {
+                                    'background-color': '#C8A857',
+                                    'label': 'data(label)',
+                                    'color': '#000000',
+                                    'text-valign': 'center',
+                                    'text-halign': 'center',
+                                    'font-family': 'Satoshi, sans-serif',
+                                    'font-size': '8px',
+                                    'font-weight': 'bold',
+                                    'text-transform': 'uppercase',
+                                    'text-wrap': 'wrap',
+                                    'text-max-width': '70px',
+                                    'width': '95px',
+                                    'height': '95px',
+                                    'border-width': '0px',
+                                    'opacity': 1,
+                                    'overlay-opacity': 0,
+                                    'z-index': 999,
+                                    'z-compound-depth': 'top'
+                                }
+                            },
+                            {
+                                selector: 'node[!active]',
+                                style: {
+                                    'background-color': '#6a6a6a',
+                                    'label': 'data(label)',
+                                    'color': '#b0b0b0',
+                                    'text-valign': 'center',
+                                    'text-halign': 'center',
+                                    'font-family': 'Satoshi, sans-serif',
+                                    'font-size': '7px',
+                                    'font-weight': 'bold',
+                                    'text-transform': 'uppercase',
+                                    'text-wrap': 'wrap',
+                                    'text-max-width': '65px',
+                                    'width': '85px',
+                                    'height': '85px',
+                                    'border-width': '1px',
+                                    'border-color': '#555555',
+                                    'opacity': 1,
+                                    'overlay-opacity': 0,
+                                    'z-index': 1,
+                                    'z-compound-depth': 'bottom'
+                                }
+                            },
+                            {
+                                selector: 'edge[active]',
+                                style: {
+                                    'width': 2,
+                                    'line-color': '#C8A857',
+                                    'target-arrow-color': '#C8A857',
+                                    'target-arrow-shape': 'triangle',
+                                    'curve-style': 'unbundled-bezier',
+                                    'control-point-distances': 40,
+                                    'control-point-weights': 0.5,
+                                    'arrow-scale': 1.2,
+                                    'opacity': 0.9,
+                                    'label': 'data(label)',
+                                    'font-size': '6px',
+                                    'font-weight': 'bold',
+                                    'color': '#F5F0E8',
+                                    'text-background-color': 'rgba(200, 168, 87, 0.95)',
+                                    'text-background-opacity': 1,
+                                    'text-background-padding': '3px',
+                                    'text-background-shape': 'round-rectangle',
+                                    'font-family': 'Satoshi, sans-serif',
+                                    'text-transform': 'uppercase',
+                                    'text-margin-y': -8,
+                                    'overlay-opacity': 0,
+                                    'z-index': 500,
+                                    'z-compound-depth': 'top'
+                                }
+                            },
+                            {
+                                selector: 'edge[!active]',
+                                style: {
+                                    'width': 1,
+                                    'line-color': '#666666',
+                                    'target-arrow-color': '#666666',
+                                    'target-arrow-shape': 'triangle',
+                                    'curve-style': 'unbundled-bezier',
+                                    'control-point-distances': 40,
+                                    'control-point-weights': 0.5,
+                                    'arrow-scale': 0.8,
+                                    'opacity': 0.4,
+                                    'label': '',
+                                    'font-size': '0px',
+                                    'overlay-opacity': 0,
+                                    'z-index': 2,
+                                    'z-compound-depth': 'bottom'
+                                }
+                            }
+                        ],
+                        layout: {
+                            name: 'cose',
+                            idealEdgeLength: 120,
+                            nodeOverlap: 20,
+                            refresh: 20,
+                            fit: true,
+                            padding: 30,
+                            randomize: false,
+                            componentSpacing: 100,
+                            nodeRepulsion: 8000,
+                            edgeElasticity: 100,
+                            nestingFactor: 5,
+                            gravity: 80,
+                            numIter: 1000,
+                            initialTemp: 200,
+                            coolingFactor: 0.95,
+                            minTemp: 1.0,
+                            animate: false
+                        },
+                        userPanningEnabled: false,
+                        userZoomingEnabled: false,
+                        boxSelectionEnabled: false,
+                        autoungrabify: true
+                    });
+                    
+                    // After layout is complete, zoom to active nodes with smooth animation
+                    cy.on('layoutstop', function() {
+                        const activeNodes = cy.nodes('[active]');
+                        
+                        if (activeNodes.length > 0) {
+                            // Fit view to active nodes with generous padding
+                            cy.animate({
+                                fit: {
+                                    eles: activeNodes,
+                                    padding: 90
+                                },
+                                duration: 1200,
+                                easing: 'ease-in-out-cubic'
+                            });
+                        } else {
+                            // If no active nodes, fit all nodes
+                            cy.fit(cy.nodes(), 90);
+                        }
+                    });
+                    
+                    // Store the instance
+                    this.cytoscapeInstances[containerId] = cy;
+                    
+                    // Force a resize after initialization (helps with mobile)
+                    setTimeout(() => {
+                        if (cy) {
+                            cy.resize();
+                            cy.fit();
+                        }
+                    }, 100);
+                },
+                
+                // Update graph to highlight active nodes for current slide (without recreating)
+                updateGraphFocus() {
+                    const slide = this.slides[this.currentSlide];
+                    if (!slide || slide.isGrid) return;
+                    
+                    const containerId = 'cy-' + slide.number;
+                    const cy = this.cytoscapeInstances[containerId];
+                    
+                    if (!cy) {
+                        // Graph doesn't exist yet, create it
+                        this.$nextTick(() => {
+                            this.initGraph(slide);
+                        });
+                        return;
+                    }
+                    
+                    // Current slide's active entities and relationships
+                    const activeEntities = new Set(slide.entities || []);
+                    const activeRelKeys = new Set();
+                    if (slide.relationships) {
+                        slide.relationships.forEach(rel => {
+                            activeRelKeys.add(`${rel.from}->${rel.to}`);
+                        });
+                    }
+                    
+                    // Update node active states
+                    cy.nodes().forEach(node => {
+                        const label = node.data('label');
+                        const isActive = activeEntities.has(label);
+                        node.data('active', isActive);
+                    });
+                    
+                    // Update edge active states
+                    cy.edges().forEach(edge => {
+                        const edgeId = edge.id();
+                        const isActive = activeRelKeys.has(edgeId.replace('edge-', ''));
+                        edge.data('active', isActive);
+                    });
+                    
+                    // Zoom to active nodes with smooth animation
+                    const activeNodes = cy.nodes('[active]');
+                    if (activeNodes.length > 0) {
+                        cy.animate({
+                            fit: {
+                                eles: activeNodes,
+                                padding: 90
+                            },
+                            duration: 1200,
+                            easing: 'ease-in-out-cubic'
+                        });
+                    }
+                },
+
+                slides: [
+                    {
+                        number: "01",
+                        category: "Portfolio Analyzer",
+                        title: "Organizational Structure Analyzer",
+                        objective: "Maps a company's organizational hierarchy across four levels from top-level divisions to product groups. The goal is to create a complete organizational chart that shows how products are structured within the company. Uses GPT-5 with web search to gather information and stores the hierarchy in Neo4j graph database for analysis.",
+                        technical: "Iterative workflow using LangGraph state machine. Starting from company level (Orglevel 0), progressively identifies entities at each hierarchical level (Orglevel 1-3) through GPT-5 API calls with web search augmentation. Each level's context feeds into the next iteration. Relationships are established with directed edges: HAS_STRATEGIC_ENTITY, HAS_PRODUCT_GROUP, and HAS_PRODUCT_ENTITY, creating a navigable organizational graph.",
+                        theory: "Graph Theory (hierarchical tree structure), Organizational Theory (hierarchical decomposition)",
+                        tags: ["GPT-5", "Web Search", "LangGraph", "Neo4j"],
+                        entities: ["Company", "Orglevel1", "Orglevel2", "Orglevel3"],
+                        relationships: [
+                            { from: "Company", to: "Orglevel1", label: "HAS_STRATEGIC_ENTITY" },
+                            { from: "Orglevel1", to: "Orglevel2", label: "HAS_PRODUCT_GROUP" },
+                            { from: "Orglevel2", to: "Orglevel3", label: "HAS_PRODUCT_ENTITY" }
+                        ]
+                    },
+                    {
+                        number: "02",
+                        category: "Portfolio Analyzer",
+                        title: "Product Research Analyzer",
+                        objective: "Discovers and catalogs all products offered by each product group identified in the organizational structure. The goal is to build a complete product inventory for the company. Uses GPT-5 with web search to find product information and stores products with semantic embeddings in Neo4j for similarity search.",
+                        technical: "Batch processing workflow that processes 10 organizational entities (Orglevel 3) simultaneously. For each entity, GPT-5 with web search identifies products offered. Product names and descriptions are converted to 1536-dimensional vector embeddings using OpenAI's text-embedding-3-small model. Products are stored as nodes with embedding properties, connected to their organizational entity via OFFERS_PRODUCT relationships and linked to the parent company.",
+                        theory: "Information Retrieval, Vector Space Models (semantic embeddings), Distributed Computing (batch parallelization)",
+                        tags: ["GPT-5", "Web Search", "AI Embeddings"],
+                        entities: ["Company", "Orglevel3", "Product"],
+                        relationships: [
+                            { from: "Company", to: "Orglevel3", label: "HAS_ENTITY" },
+                            { from: "Orglevel3", to: "Product", label: "OFFERS_PRODUCT" }
+                        ]
+                    },
+                    {
+                        number: "03",
+                        category: "Portfolio Analyzer",
+                        title: "UNSPSC Category Classifier",
+                        objective: "Assigns each product to a standardized UNSPSC category code. UNSPSC (United Nations Standard Products and Services Code) is a global taxonomy with 8-digit codes organized in four levels: Segment → Family → Class → Commodity. The goal is to enable product comparison across companies using this international standard. Uses GPT-5 with web search for accurate classification.",
+                        technical: "Batch classification workflow processing 10 products simultaneously. For each product, GPT-5 with web search determines the appropriate 8-digit UNSPSC code. Software products are automatically classified under Segment 43 (Information Technology). The system creates the complete hierarchical chain: Product → Commodity → Class → Family → Segment, establishing BELONGS_TO relationships at each level to maintain the taxonomy structure.",
+                        theory: "Taxonomy Theory (hierarchical classification), Information Architecture (controlled vocabularies)",
+                        tags: ["GPT-5", "Web Search", "UNSPSC", "Classification"],
+                        entities: ["Product", "UNSPSCSegment", "UNSPSCFamily", "UNSPSCClass", "UNSPSCCommodity"],
+                        relationships: [
+                            { from: "Product", to: "UNSPSCCommodity", label: "HAS_CLASSIFICATION" },
+                            { from: "UNSPSCCommodity", to: "UNSPSCClass", label: "BELONGS_TO" },
+                            { from: "UNSPSCClass", to: "UNSPSCFamily", label: "BELONGS_TO" },
+                            { from: "UNSPSCFamily", to: "UNSPSCSegment", label: "BELONGS_TO" }
+                        ]
+                    },
+                    {
+                        number: "REF-1",
+                        category: "Portfolio Analyzer",
+                        title: "UNSPSC Product Category Reference System",
+                        objective: "The United Nations Standard Products and Services Code (UNSPSC) is a global classification system for products and services. It provides a hierarchical structure with 4 levels: Segment (2 digits) → Family (4 digits) → Class (6 digits) → Commodity (8 digits). This standardized taxonomy enables consistent product classification across industries and facilitates procurement, supply chain management, and market analysis worldwide.",
+                        tags: ["Reference Grid", "UNSPSC", "Classification Standard"],
+                        isGrid: true,
+                        gridInfo: [
+                            { title: "Segment (2 digits)", description: "Broadest categorization level (e.g., 43 = Information Technology)" },
+                            { title: "Family (4 digits)", description: "Subset within a segment (e.g., 4311 = Computers)" },
+                            { title: "Class (6 digits)", description: "More specific grouping (e.g., 431120 = Desktop Computers)" },
+                            { title: "Commodity (8 digits)", description: "Most granular level (e.g., 43112001 = High-end Desktop Computers)" }
+                        ]
+                    },
+                    {
+                        number: "04",
+                        category: "Portfolio Analyzer",
+                        title: "Product Deduplication Analyzer",
+                        objective: "Identifies and merges duplicate product entries in the database. The goal is to create a clean product list without redundant entries. Uses AI embeddings to find similar products and GPT-5 to validate whether they are truly duplicates. Examples: 'SRS' and 'Siemens Remote Services' → consolidated into single entry; 'CT Scanner' and 'MRI Scanner' → kept separate as different products.",
+                        technical: "Iterative clustering algorithm with adaptive similarity thresholds starting at 70% and decreasing by 5% per iteration (70% → 65% → 60% → 55% → 50% minimum). Each product's embedding vector is compared using cosine similarity. Candidate clusters are validated by GPT-5 with web search. For confirmed duplicates, product names are consolidated following the pattern: product_family + name + appendix. New embeddings are generated for consolidated products and original products are merged into single nodes.",
+                        theory: "Clustering Theory (hierarchical agglomerative clustering), Vector Space Models (cosine similarity), Record Linkage Theory",
+                        tags: ["GPT-5", "AI Embeddings", "Deduplication", "Vector Similarity"],
+                        entities: ["Product", "UNSPSCCommodity", "Company"],
+                        relationships: [
+                            { from: "Product", to: "UNSPSCCommodity", label: "CLASSIFIED_AS" },
+                            { from: "Product", to: "Company", label: "OWNED_BY" }
+                        ]
+                    },
+                    {
+                        number: "05",
+                        category: "Portfolio Analyzer",
+                        title: "Child Categories Generator",
+                        objective: "Creates more specific product subcategories within each UNSPSC commodity based on how companies actually organize and market their products. The goal is to reflect real industry segmentation rather than just official UNSPSC codes. For example, within 'Medical Imaging Equipment', creates subcategories like 'Cardiac Imaging Systems' or 'Point-of-Care Ultrasound'. Uses GPT-5 with web search to identify industry-standard subdivisions.",
+                        technical: "Batch processing workflow handling 10 UNSPSC commodities simultaneously. For each commodity, GPT-5 analyzes how leading manufacturers segment their product offerings based on application, scale, or use case. Identified child categories are stored as Commodity_Child nodes with vector embeddings of category names using text-embedding-3-small. Relationships connect each child category to its parent UNSPSC commodity via BELONGS_TO edges, enabling semantic search and hierarchical navigation.",
+                        theory: "Taxonomy Theory (polyhierarchical classification), Market Segmentation Theory, Faceted Classification",
+                        tags: ["GPT-5", "AI Embeddings", "Market Analysis"],
+                        entities: ["UNSPSCCommodity", "Commodity_Child", "Product"],
+                        relationships: [
+                            { from: "Commodity_Child", to: "UNSPSCCommodity", label: "BELONGS_TO" },
+                            { from: "Product", to: "UNSPSCCommodity", label: "CLASSIFIED_AS" }
+                        ]
+                    },
+                    {
+                        number: "06",
+                        category: "Portfolio Analyzer",
+                        title: "Child Category Deduplication",
+                        objective: "Identifies and merges duplicate child category entries across the database. The goal is to create universal child categories that work across different companies and UNSPSC commodities. Uses AI embeddings to find similar categories and GPT-5 to validate whether they represent the same market segment.",
+                        technical: "Iterative clustering with adaptive similarity thresholds (65% → 60% → 55% → 50% minimum). Category embeddings are compared using cosine similarity. Candidate clusters undergo GPT-5 validation with web search. The algorithm performs both cross-company consolidation (same category used by different companies) and cross-commodity consolidation (same category applicable to multiple UNSPSC codes). All BELONGS_TO_COMMODITY relationships are preserved during consolidation to maintain data integrity.",
+                        theory: "Record Linkage Theory, Entity Resolution, Graph Theory (relationship preservation)",
+                        tags: ["GPT-5", "AI Embeddings", "Deduplication"],
+                        entities: ["Commodity_Child", "UNSPSCCommodity"],
+                        relationships: [
+                            { from: "Commodity_Child", to: "UNSPSCCommodity", label: "BELONGS_TO" }
+                        ]
+                    },
+                    {
+                        number: "07",
+                        category: "Portfolio Analyzer",
+                        title: "Product to Child Category Mapper",
+                        objective: "Assigns each product to its most appropriate child category within its UNSPSC commodity. The goal is one-to-one mapping where every product belongs to exactly one child category. Uses GPT-5-mini to analyze product titles and descriptions and match them to the best-fitting child category based on meaning, not just keywords.",
+                        technical: "Semantic matching workflow using GPT-5-mini for each product within its UNSPSC Commodity context. The LLM evaluates product title and description against all available child categories in that commodity. Matching is based on semantic similarity of product characteristics to category definition, not simple keyword matching. Each product establishes an IS_IN_CHILD relationship to exactly one Commodity_Child node. Mappings are uploaded immediately after determination for incremental progress tracking.",
+                        theory: "Semantic Similarity, Natural Language Understanding, Classification Theory (single-label classification)",
+                        tags: ["GPT-5-mini", "Semantic Matching", "Classification"],
+                        entities: ["Product", "Commodity_Child", "UNSPSCCommodity"],
+                        relationships: [
+                            { from: "Product", to: "Commodity_Child", label: "IS_IN_CHILD" },
+                            { from: "Commodity_Child", to: "UNSPSCCommodity", label: "BELONGS_TO" }
+                        ]
+                    },
+                    {
+                        number: "08",
+                        category: "Portfolio Analyzer",
+                        title: "Functionality Analyzer",
+                        objective: "Identifies what capabilities or functions products in each category should have for comparison purposes. The goal is to create brand-neutral functionality definitions that enable comparing products from different manufacturers. Analyzes at two levels: broad functionalities for entire UNSPSC commodities and specific functionalities for child categories. Includes metrics, standards, and Kano model tags (basic, performance, excitement features).",
+                        technical: "Two-tier analysis architecture. Tier 1: UNSPSC Commodity level analysis using GPT-5 with web search to identify core functionalities common across all products in that commodity. Tier 2: Commodity_Child level analysis that adapts commodity-level functionalities to the specific child category context. Each functionality is defined with: measurable metrics, relevant industry standards, Kano model classification (must-be, one-dimensional, attractive, indifferent, reverse), and standardized procurement phrasing. Functionalities are stored as nodes with FUNCTIONALITY_OF edges to commodities and ADAPTED_FOR edges to child categories.",
+                        theory: "Kano Model (customer satisfaction theory), Requirements Engineering, Comparative Analysis Frameworks",
+                        tags: ["GPT-5", "Web Search", "Kano Model", "Feature Analysis"],
+                        entities: ["UNSPSCCommodity", "Commodity_Child", "Functionality"],
+                        relationships: [
+                            { from: "Functionality", to: "UNSPSCCommodity", label: "FUNCTIONALITY_OF" },
+                            { from: "Functionality", to: "Commodity_Child", label: "ADAPTED_FOR" }
+                        ]
+                    },
+                    {
+                        number: "09",
+                        category: "Portfolio Analyzer",
+                        title: "Feature to Functionality Mapper",
+                        objective: "Connects actual product features to the functionality definitions. The goal is to document which specific features each product has and how those features fulfill the defined functionalities. Uses GPT-5-mini with web search to research products and extract concrete feature information including metric values and units.",
+                        technical: "Research workflow using GPT-5-mini with web search for each product connected to Commodity_Child nodes. For each functionality defined in the category, the system researches whether the product offers features serving that functionality. When features are found, the system extracts specific metric values with units from documentation and marketing materials. Feature nodes are created with: brand name, owning company, feature description, source URLs for verification, and timestamp for data freshness. Relationships: Product → Feature (HAS_FEATURE), Feature → Functionality (SERVES).",
+                        theory: "Information Extraction, Feature-Benefit Analysis, Requirements Traceability",
+                        tags: ["GPT-5-mini", "Web Search", "Feature Mapping"],
+                        entities: ["Product", "Feature", "Functionality"],
+                        relationships: [
+                            { from: "Product", to: "Feature", label: "HAS_FEATURE" },
+                            { from: "Feature", to: "Functionality", label: "SERVES" }
+                        ]
+                    },
+                    {
+                        number: "10",
+                        category: "Competitor Analyzer",
+                        title: "Direct Competitor Research",
+                        objective: "Identifies companies that offer competing products in the same child categories as the home company. The goal is to map the competitive landscape by finding direct competitors for each product segment. Uses GPT-5 with dual validation: first from knowledge base, then verified through web search. Creates embeddings for deduplication.",
+                        technical: "Dual-phase validation workflow for each Child_Category connected to home company products. Phase 1: GPT-5 identifies potential competitors based on knowledge. Phase 2: Web search validation confirms competitor presence in that category. Company names are converted to embeddings using text-embedding-3-small for deduplication across categories. For each confirmed competitor, the system creates Company nodes and establishes relationships: Company → Commodity_Child (COMPETES_IN) and Company → UNSPSCClass (ACTIVE_IN). Companies are uploaded immediately after each category processing for incremental progress.",
+                        theory: "Competitive Intelligence, Market Structure Analysis, Entity Resolution",
+                        tags: ["GPT-5", "Web Search", "Competitor Analysis", "AI Embeddings"],
+                        entities: ["Commodity_Child", "Company", "UNSPSCClass"],
+                        relationships: [
+                            { from: "Company", to: "Commodity_Child", label: "COMPETES_IN" },
+                            { from: "Company", to: "UNSPSCClass", label: "ACTIVE_IN" }
+                        ]
+                    },
+                    {
+                        number: "11",
+                        category: "Competitor Analyzer",
+                        title: "Pre-Sale Competitor Research",
+                        objective: "Identifies companies with products that are announced or in pre-sale stages but not yet fully available. The goal is to track emerging competitive threats and future market entrants. Focuses on upcoming product launches and announcements. Uses GPT-5 with web search and creates embeddings for deduplication.",
+                        technical: "Specialized research workflow using GPT-5 with web search focused on pre-release product information. For each Child_Category, the system searches for announcements, product roadmaps, and pre-sale offerings. Company names are embedded using text-embedding-3-small for intelligent deduplication across categories. Competitor nodes are created with relationships: Company → Commodity_Child (PRESALE_IN) and Company → UNSPSCClass (EMERGING_IN) to distinguish pre-sale from active competitors. Companies are uploaded immediately after category processing to enable incremental tracking of emerging threats.",
+                        theory: "Competitive Intelligence, Technology Forecasting, Market Entry Analysis",
+                        tags: ["GPT-5", "Web Search", "Pre-Sale Analysis"],
+                        entities: ["Commodity_Child", "Company", "UNSPSCClass"],
+                        relationships: [
+                            { from: "Company", to: "Commodity_Child", label: "PRESALE_IN" },
+                            { from: "Company", to: "UNSPSCClass", label: "EMERGING_IN" }
+                        ]
+                    },
+                    {
+                        number: "12",
+                        category: "Market Analyzer",
+                        title: "Top-Level Market Identifier",
+                        objective: "Identifies the high-level markets where products are used based on the Jobs-to-be-Done framework. Markets are defined by the jobs customers are trying to accomplish, not by the technology. Uses CPC (Central Product Classification) Version 2 5-digit codes to classify markets. Implements iterative refinement: initial analysis, augmentation, and final web search validation. Includes validation against how leading manufacturers segment their markets.",
+                        technical: "Three-phase iterative workflow using GPT-5-mini. Phase 1a-1b: Primary market identification in main CPC code (initial + augmentation without web search). Phase 1c: Final validation with web search. Phase 2a-2b: Secondary market exploration in other CPC codes (initial + augmentation). Phase 2c: Final validation with web search. Phase 2d: Competitor validation analyzing all major manufacturers to identify additional markets including niche segments. Each market includes: solution-agnostic core functional job, market name (adjective + verb-noun format), description with job executors and meeting place, and 5-digit CPC Version 2 code. Relationships: Market → UNSPSCCommodity (HAS_MARKET), Market → CPC (CLASSIFIED_BY).",
+                        theory: "Jobs-to-be-Done Framework (Christensen/Ulwick), Market Definition Theory, CPC Classification System",
+                        tags: ["GPT-5-mini", "Web Search", "JTBD", "CPC Classification"],
+                        entities: ["UNSPSCCommodity", "Market", "CPC"],
+                        relationships: [
+                            { from: "Market", to: "UNSPSCCommodity", label: "HAS_MARKET" },
+                            { from: "Market", to: "CPC", label: "CLASSIFIED_BY" }
+                        ]
+                    },
+                    {
+                        number: "REF-2",
+                        category: "Market Analyzer",
+                        title: "Market Definition Framework",
+                        objective: "Markets are defined by the jobs customers are trying to accomplish, not by products or technologies. This Jobs-to-be-Done (JTBD) approach focuses on the underlying functional needs that remain stable even as technologies change. A market consists of: a Core Functional Job (the goal), Job Executors (who does it), and Meeting Place (where/how they interact). Example: 'Cardiac Imaging' market has the job 'To visualize heart structure and function', executed by cardiologists and radiologists in hospitals and clinics, using any technology (MRI, CT, ultrasound, etc.).",
+                        tags: ["JTBD Framework", "Market Definition", "Theory"],
+                        isGrid: true,
+                        gridInfo: [
+                            { title: "Core Functional Job", description: "Solution-agnostic goal starting with 'To [verb phrase]'. Never mentions specific technologies or methods. Example: 'To visualize anatomical structures' not 'To perform MRI scans'" },
+                            { title: "Market Name Format", description: "Adjective + Verb-Noun with space between (e.g., 'Cardiac Imaging', 'Point-of-Care Testing'). Adjective describes application context, noun is derived from the functional verb" },
+                            { title: "Job Executors", description: "Who performs the job - the actors with the unmet need. Can be professionals, organizations, or end users" },
+                            { title: "Meeting Place", description: "Where and how job executors come together to get the job done. Describes the context without specifying technology" },
+                            { title: "CPC Classification", description: "Each market is classified with a 5-digit UN UNSD CPC Version 2 code indicating where the market exists in the product/service space" }
+                        ]
+                    },
+                    {
+                        number: "REF-3",
+                        category: "Market Analyzer",
+                        title: "UNSD CPC Reference Grid",
+                        objective: "The United Nations Statistics Division Central Product Classification (CPC) Version 2 is a comprehensive international standard for classifying all goods and services. It uses a 5-digit hierarchical code system that enables consistent classification across economic activities, industries, and regions. CPC is used for economic analysis, trade statistics, and market research, providing a unified framework for understanding product and service categories globally.",
+                        tags: ["Reference Grid", "CPC", "UN Standard"],
+                        isGrid: true,
+                        gridInfo: [
+                            { title: "Section (1 digit)", description: "Broadest level covering major economic sectors" },
+                            { title: "Division (2 digits)", description: "Subdivision of sections into major product groups" },
+                            { title: "Group (3 digits)", description: "More specific product categories" },
+                            { title: "Class (4 digits)", description: "Detailed product classifications" },
+                            { title: "Subclass (5 digits)", description: "Most granular classification level for products and services" }
+                        ]
+                    },
+                    {
+                        number: "13",
+                        category: "Market Analyzer",
+                        title: "Market Deduplication Analyzer",
+                        objective: "Identifies and merges duplicate market entries in the database. The goal is to ensure each unique market exists only once. Uses AI embeddings on both market names and Core Functional Jobs, then validates with GPT-5. Ensures consolidated markets maintain solution-agnostic definitions according to JTBD framework and preserve CPC classification codes.",
+                        technical: "Dual-embedding approach: generates separate embeddings for market names and Core Functional Job descriptions using text-embedding-3-small. Iterative clustering with adaptive similarity thresholds (65% → 60% → 55% → 50% minimum). Candidate clusters are validated by GPT-5 checking if markets represent the same underlying job. During consolidation, the system enforces JTBD conventions: market names must remain solution-agnostic, Core Functional Jobs cannot reference specific technologies, and UN UNSD CPC Version 2 classification metadata is preserved. All relationships to UNSPSC commodities are maintained.",
+                        theory: "Record Linkage Theory, Entity Resolution, Jobs-to-be-Done Framework (solution-agnostic principle)",
+                        tags: ["GPT-5", "JTBD", "Deduplication", "Vector Similarity"],
+                        entities: ["Market", "UNSPSCCommodity", "CPC"],
+                        relationships: [
+                            { from: "Market", to: "UNSPSCCommodity", label: "HAS_MARKET" },
+                            { from: "Market", to: "CPC", label: "CLASSIFIED_BY" }
+                        ]
+                    },
+                    {
+                        number: "14",
+                        category: "Market Analyzer",
+                        title: "Market Augmentation Analyzer",
+                        objective: "Discovers additional JTBD markets that were missed in the initial market identification. The goal is to ensure complete market coverage by finding markets with distinctly different Core Functional Jobs. Implements two-step workflow: initial analysis without web search, then final validation with web search for accuracy. Uses CPC Version 2 codes for classification.",
+                        technical: "Two-phase workflow using GPT-5. Phase 1: Initial augmentation analysis without web search examines existing markets for the UNSPSC commodity and identifies gaps - markets where the Core Functional Job is distinctly different from all existing markets. Phase 2: Final validation with web search confirms these are genuine separate markets used by manufacturers. Each new market must pass the distinctiveness test: its Core Functional Job cannot overlap significantly with existing markets' jobs. Markets are stored with 5-digit CPC Version 2 codes and relationships to UNSPSC commodities.",
+                        theory: "Completeness Theory (exhaustive enumeration), Jobs-to-be-Done Framework (job distinctiveness)",
+                        tags: ["GPT-5", "Web Search", "JTBD", "Market Discovery"],
+                        entities: ["Market", "UNSPSCCommodity", "CPC"],
+                        relationships: [
+                            { from: "Market", to: "UNSPSCCommodity", label: "HAS_MARKET" },
+                            { from: "Market", to: "CPC", label: "CLASSIFIED_BY" }
+                        ]
+                    },
+                    {
+                        number: "15",
+                        category: "Market Analyzer",
+                        title: "Market Hierarchy Creator",
+                        objective: "Organizes flat market lists into hierarchical structures with up to 3 levels. The goal is to show how specific markets (submarkets) are specializations or subsets of broader markets. Uses GPT-5 with enhanced reasoning to analyze market names and Core Functional Jobs to determine genuine containment relationships. Maintains CPC codes throughout the hierarchy.",
+                        technical: "Hierarchical relationship analysis using GPT-5 with high reasoning capability. For each market pair, the system analyzes: 1) Market names for semantic containment, 2) Core Functional Jobs for specialization relationships. Genuine hierarchies are identified when a submarket's job is a specialized case of the parent market's job. Creates is_Market_of relationships with hierarchy_level properties (1, 2, or 3) indicating depth in the tree. All markets maintain their CPC Version 2 classification regardless of hierarchy position. The algorithm prevents circular relationships and ensures proper tree structure.",
+                        theory: "Hierarchical Taxonomy Theory, Ontology Engineering (subsumption relationships), Graph Theory (directed acyclic graphs)",
+                        tags: ["GPT-5", "High Reasoning", "Hierarchy Analysis"],
+                        entities: ["Market", "CPC"],
+                        relationships: [
+                            { from: "Market", to: "Market", label: "is_Market_of" },
+                            { from: "Market", to: "CPC", label: "CLASSIFIED_BY" }
+                        ]
+                    },
+                    {
+                        number: "16",
+                        category: "Market Analyzer",
+                        title: "Level 2 Submarket Analyzer",
+                        objective: "Finds missing Level 2 submarkets under each Level 1 market by analyzing industry taxonomy and how leading manufacturers segment their markets. The goal is to ensure each Level 1 market has complete coverage of its Level 2 subspecializations. New submarkets must align with the parent market's Core Functional Job and match the granularity of existing Level 2 markets. Uses GPT-5 with enhanced reasoning.",
+                        technical: "Gap analysis workflow using GPT-5 with high reasoning for each Level 1 market. Process: 1) Examines existing Level 2 submarkets to understand granularity and segmentation logic, 2) Researches how major OEMs segment this market in their product portfolios and marketing, 3) Identifies missing Level 2 specializations. Validation criteria: new submarkets must represent genuine specializations of the parent Level 1 job, maintain the same level of granularity as existing Level 2 markets, and reflect real industry segmentation practices. Creates is_Market_of relationships with hierarchy_level=2.",
+                        theory: "Market Segmentation Theory, Gap Analysis, Hierarchical Completeness",
+                        tags: ["GPT-5", "High Reasoning", "Market Segmentation"],
+                        entities: ["Market L1", "Market L2"],
+                        relationships: [
+                            { from: "Market L2", to: "Market L1", label: "is_Market_of" }
+                        ]
+                    },
+                    {
+                        number: "17",
+                        category: "Market Analyzer",
+                        title: "Level 3 Submarket Analyzer",
+                        objective: "Finds missing Level 3 submarkets under each Level 2 market through industry taxonomy analysis and OEM segmentation research. The goal is deepest level of market specialization. New submarkets must align with parent Level 2 market's Core Functional Job and represent genuine specializations reflected in how manufacturers organize their offerings. Uses GPT-5 with enhanced reasoning.",
+                        technical: "Deep specialization analysis using GPT-5 with high reasoning for each Level 2 market. Process: 1) Studies existing Level 3 submarkets to understand finest level of segmentation, 2) Analyzes how major manufacturers subdivide this Level 2 market in technical documentation and product lines, 3) Identifies missing Level 3 specializations. Validation: new submarkets must be genuine subsets or specializations of parent Level 2 job, represent the most granular level of market segmentation used in the industry, and correspond to how OEMs actually differentiate their product portfolios. Creates is_Market_of relationships with hierarchy_level=3.",
+                        theory: "Market Segmentation Theory (multi-level), Specialization Analysis, Industry Structure Theory",
+                        tags: ["GPT-5", "High Reasoning", "Deep Market Analysis"],
+                        entities: ["Market L2", "Market L3"],
+                        relationships: [
+                            { from: "Market L3", to: "Market L2", label: "is_Market_of" }
+                        ]
+                    },
+                    {
+                        number: "REF-4",
+                        category: "Market Analyzer",
+                        title: "Regional Income Zones Reference",
+                        objective: "The Regional Income Zones classification system combines World Bank Income Classification (4 tiers: Low, Lower-middle, Upper-middle, High income) with 11 geographic zones for comprehensive market analysis. This dual classification enables strategic market segmentation by both economic development level and geographic region, facilitating targeted market entry strategies, competitive analysis, and resource allocation across different economic and geographic markets.",
+                        tags: ["Reference Grid", "World Bank", "Geographic Zones"],
+                        isGrid: true,
+                        gridInfo: [
+                            { title: "World Bank Income Levels", description: "4 tiers based on GNI per capita: Low income, Lower-middle income, Upper-middle income, and High income countries" },
+                            { title: "11 Geographic Zones", description: "North America, Latin America, Western Europe, Eastern Europe, Middle East, Africa, South Asia, East Asia, Southeast Asia, Oceania, and Japan/South Korea" },
+                            { title: "Combined Classification", description: "Enables analysis at intersection of income level and geography (e.g., High-income Western Europe, Lower-middle income South Asia)" }
+                        ]
+                    }
+                ],
+                
+                next() {
+                    if (this.currentSlide < this.slides.length - 1) {
+                        this.currentSlide++;
+                        this.updateGraphFocus();
+                        this.resizeCurrentGraph();
+                    }
+                },
+                
+                prev() {
+                    if (this.currentSlide > 0) {
+                        this.currentSlide--;
+                        this.updateGraphFocus();
+                        this.resizeCurrentGraph();
+                    }
+                },
+                
+                goTo(index) {
+                    this.currentSlide = index;
+                    this.updateGraphFocus();
+                    this.resizeCurrentGraph();
+                },
+                
+                resizeCurrentGraph() {
+                    const slide = this.slides[this.currentSlide];
+                    if (!slide || slide.isGrid) return;
+                    
+                    const containerId = 'cy-' + slide.number;
+                    const cy = this.cytoscapeInstances[containerId];
+                    
+                    if (cy) {
+                        setTimeout(() => {
+                            cy.resize();
+                            cy.fit();
+                        }, 150);
+                    }
+                },
+                
+                init() {
+                    console.log('Carousel initialized with', this.slides.length, 'slides');
+                    
+                    // Initialize first graph with retry for mobile
+                    this.$nextTick(() => {
+                        setTimeout(() => {
+                            this.updateGraphFocus();
+                            // Ensure graph is visible on mobile
+                            this.resizeCurrentGraph();
+                        }, 100);
+                    });
+                    
+                    // Keyboard navigation
+                    document.addEventListener('keydown', (e) => {
+                        if (e.key === 'ArrowRight') this.next();
+                        if (e.key === 'ArrowLeft') this.prev();
+                    });
+                }
+            }
+        }
+        
+        // Log when Alpine is ready
+        document.addEventListener('alpine:init', () => {
+            console.log('Alpine.js initialized');
+        });
+    </script>
+    
+    <!-- Alpine.js - Load at end to ensure DOM is ready -->
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
+</body>
+</html>
