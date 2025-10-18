@@ -191,41 +191,130 @@
             }
         }
         
-        /* 13-inch notebook optimizations (1280-1400px) */
-        @media (min-width: 1024px) and (max-width: 1400px) {
+        /* Medium laptops with zoom (MacBook Air at 125%, 13-inch at 100%) - 1100-1300px */
+        @media (min-width: 1100px) and (max-width: 1300px) {
             /* Intro slide: enable scrolling and reduce sizes */
             .intro-module-grid {
-                max-height: 60vh;
+                max-height: 50vh;
                 overflow-y: auto;
-                padding-right: 8px;
+                padding-right: 10px;
             }
             
             /* Reduce title sizes on module slides to prevent overlap */
             .module-title {
-                font-size: 1.875rem !important;
+                font-size: 1.5rem !important;
+                line-height: 1.15 !important;
+                margin-bottom: 0.375rem !important;
+                margin-top: 0.375rem !important;
+            }
+            
+            /* Reduce spacing in intro slide */
+            .intro-container {
+                padding-top: 2rem !important;
+                padding-bottom: 2rem !important;
+            }
+            
+            /* Intro slide main title */
+            .intro-container h1 {
+                font-size: 2.5rem !important;
+                margin-bottom: 1rem !important;
+                line-height: 1.1 !important;
+            }
+            
+            /* Intro slide subtitle */
+            .intro-container > div:first-child > p {
+                font-size: 0.65rem !important;
+                margin-bottom: 1rem !important;
+            }
+            
+            /* Intro slide description */
+            .intro-container > div:first-child > p:nth-child(3) {
+                font-size: 0.75rem !important;
+                margin-bottom: 1rem !important;
+                line-height: 1.5 !important;
+            }
+            
+            /* Tags */
+            .intro-container .flex.flex-wrap {
+                margin-bottom: 1rem !important;
+            }
+            
+            /* Tighter spacing for module boxes */
+            .module-box {
+                padding: 0.75rem !important;
+            }
+            
+            .module-box .rounded-full {
+                width: 2.5rem !important;
+                height: 2.5rem !important;
+                margin-bottom: 0.5rem !important;
+            }
+            
+            .module-box .rounded-full span {
+                font-size: 1rem !important;
+            }
+            
+            .module-box h4 {
+                font-size: 0.7rem !important;
+                margin-bottom: 0.375rem !important;
+            }
+            
+            .module-box p {
+                font-size: 0.65rem !important;
+                margin-bottom: 0.375rem !important;
+            }
+            
+            .module-box span:last-child {
+                font-size: 0.6rem !important;
+            }
+            
+            /* Smaller module overview title */
+            .module-overview-title {
+                font-size: 0.75rem !important;
+                margin-bottom: 0.5rem !important;
+            }
+            
+            /* Reduce left column text sizes */
+            .module-title + div h3,
+            .module-title ~ div h3 {
+                font-size: 0.65rem !important;
+            }
+            
+            .module-title + div p,
+            .module-title ~ div p {
+                font-size: 0.7rem !important;
+                line-height: 1.5 !important;
+            }
+        }
+        
+        /* Larger laptops with some zoom - 1300-1450px */
+        @media (min-width: 1300px) and (max-width: 1450px) {
+            /* Intro slide: enable scrolling */
+            .intro-module-grid {
+                max-height: 55vh;
+                overflow-y: auto;
+                padding-right: 10px;
+            }
+            
+            /* Reduce title sizes on module slides */
+            .module-title {
+                font-size: 1.75rem !important;
                 line-height: 1.2 !important;
                 margin-bottom: 0.5rem !important;
             }
             
             /* Reduce spacing in intro slide */
             .intro-container {
-                padding-top: 3rem !important;
-                padding-bottom: 3rem !important;
+                padding-top: 2.5rem !important;
+                padding-bottom: 2.5rem !important;
             }
             
-            /* Intro slide main title */
             .intro-container h1 {
-                font-size: 3rem !important;
-                margin-bottom: 1.5rem !important;
+                font-size: 2.75rem !important;
+                margin-bottom: 1.25rem !important;
             }
             
-            /* Intro slide description */
-            .intro-container p {
-                font-size: 0.875rem !important;
-                margin-bottom: 1.5rem !important;
-            }
-            
-            /* Tighter spacing for module boxes */
+            /* Module boxes */
             .module-box {
                 padding: 0.875rem !important;
             }
@@ -236,12 +325,6 @@
             
             .module-box p {
                 font-size: 0.7rem !important;
-            }
-            
-            /* Smaller module overview title */
-            .module-overview-title {
-                font-size: 0.875rem !important;
-                margin-bottom: 0.75rem !important;
             }
         }
     </style>
